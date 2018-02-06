@@ -1,5 +1,6 @@
 package core.view;
 
+import core.MainApp;
 import core.util.Utilities;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -10,6 +11,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 
@@ -35,10 +37,28 @@ public class VideoPlayerController {
     // parameter to resize and play the frame with sound
     private int width;
     private int height;
-    @FXML
-    private void initialize(){
+    private int sampleRate;
+    private int sampleSizeInBits;
+    private int numberOfChannels;
+    private int quantizationLevel;
+    private double[] freq; //frequency to play the sound
 
+    @FXML
+    private void initialize() {
+        width = 64;
+        height = 64;
+
+        // set the frequency on each col
+        freq = new double[height];
+        freq[height / 2 - 1] = 440.0; // 440KHZ - Sound of A (La)
+        for (int m = height / 2; m < height; m++) {
+            freq[m] = freq[m - 1] * Math.pow(2, 1.0 / 12.0);
+        }
+        for (int m = height / 2 - 2; m >= 0; m--) {
+            freq[m] = freq[m + 1] * Math.pow(2, -1.0 / 12.0);
+        }
     }
+
     // deal with the data
     @FXML
     protected void playVideo(ActionEvent event) {
@@ -55,6 +75,7 @@ public class VideoPlayerController {
                         Mat frame = grabFrame();
                         // convert
                         Image imageToshow = Utilities.mat2Image(frame);
+                        // add a click sound before update the frame
                         updateImageView(currentFrame, imageToshow);
                     }
                 };
@@ -107,7 +128,7 @@ public class VideoPlayerController {
             }
         }
 
-        if (this.capture.isOpened()){
+        if (this.capture.isOpened()) {
             this.capture.release();
         }
     }
@@ -116,8 +137,28 @@ public class VideoPlayerController {
         Utilities.onFXThread(view.imageProperty(), image);
     }
 
-    private void playFrame(Mat frame){
+    private void playFrame(Mat frame) {
+        if (!frame.empty()) {
+            // convert RGB into greyscale
+            Mat grayImage = new Mat();
+            Imgproc.cvtColor(frame, grayImage, Imgproc.COLOR_BGR2GRAY);
 
+            // resize the image
+            Mat resizedImage = new Mat();
+            Imgproc.resize(grayImage, resizedImage, new Size(width, height));
+
+            // quantization
+            double[][] roudedImage = new double[grayImage.rows()][grayImage.cols()];
+            for (int row = 0; row < resizedImage.rows(); row++) {
+                for (int col = 0; col < resizedImage.cols(); col++) {
+                    roudedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / (Math.pow(2, 8) / quantizationLevel)) / quantizationLevel;
+                }
+            }
+
+            // paly the audio
+        } else {
+            System.err.println("Cannot play sounds from frame as it is empty.");
+        }
     }
 
 
