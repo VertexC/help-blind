@@ -60,6 +60,13 @@ public class VideoPlayerController {
     private int periodMillisecond;
     private int baseOfClip;
 
+    // parameter for hitogram
+    private int histoWidth;
+    private int histoHeight;
+
+    // for slider
+    private boolean sliderDragged;
+
     @FXML
     private void initialize() throws LineUnavailableException {
         // for audio
@@ -118,15 +125,23 @@ public class VideoPlayerController {
                         // grabe the frame from the video
                         Mat frame = grabFrame();
                         if (!frame.empty()) {
-                            clip.stop();
-                            clip.setFramePosition(0);
-                            clip.start();
-                            // convert
-                            Image imageToshow = Utilities.mat2Image(frame);
-                            // add a click sound before update the frame
-                            updateVideoView(currentFrame, imageToshow);
-                            updateHistogramView(imageToshow);
-                            //playClick();
+                            if(sliderDragged){
+                                // after slider is dragged, set the video capture to that frame
+                            }
+                            else {
+                                clip.stop();
+                                clip.setFramePosition(0);
+                                clip.start();
+                                // convert
+                                Image imageToshow = Utilities.mat2Image(frame);
+                                // add a click sound before update the frame
+                                updateVideoView(currentFrame, imageToshow);
+                                updateHistogramView(imageToshow);
+                                //playClick();
+                                double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
+                                double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
+                                slider.setValue(currentFrameNumber/totalFrameCount * (slider.getMax() - slider.getMin()));
+                            }
                         } else {
                             // end of the video
                             capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
@@ -150,6 +165,14 @@ public class VideoPlayerController {
             // stop the timer
             this.stopAcquisition();
         }
+    }
+
+    @FXML
+    protected void slidDrag(){
+        // After drag done
+        this.sliderDragged = true;
+        double currentSliderPosition = slider.getValue();
+
     }
 
     private Mat grabFrame() {
@@ -193,7 +216,6 @@ public class VideoPlayerController {
     }
 
     private void updateHistogramView(Image image){
-
     }
 
     private void playClick() {
