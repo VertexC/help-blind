@@ -10,22 +10,20 @@ import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-import javafx.scene.media.AudioClip;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.util.Duration;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.video.Video;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.*;
 import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +36,8 @@ public class VideoPlayerController {
     private ImageView currentFrame;
     @FXML
     private Slider slider;
+    @FXML
+    private ImageView histogram;
 
     private VideoCapture capture = new VideoCapture();
     private boolean playVideo = false;
@@ -51,12 +51,17 @@ public class VideoPlayerController {
     private int sampleSizeInBits;
     private int numberOfChannels;
     private int quantizationLevel;
-    private int  numberOfSamplesPerColumn;
-    private MediaPlayer mediaPlayer;
+    private int numberOfSamplesPerColumn;
     private double[] freq; //frequency to play the sound
 
+    // for click sound
+    private MediaPlayer mediaPlayer;
+    private Clip clip;
+    private int periodMillisecond;
+    private int baseOfClip;
+
     @FXML
-    private void initialize() {
+    private void initialize() throws LineUnavailableException {
         // for audio
         width = 64;
         height = 64;
@@ -77,38 +82,52 @@ public class VideoPlayerController {
             freq[m] = freq[m + 1] * Math.pow(2, -1.0 / 12.0);
         }
 
-        // open the click sound
-        String musicFile = "source/sound/Button_Push.mp3";
-        Media sound = new Media(new File(musicFile).toURI().toString());
-        mediaPlayer = new MediaPlayer(sound);
-        mediaPlayer.setVolume(0.4);
-        mediaPlayer.setCycleCount(100);
-        mediaPlayer.play();
+        periodMillisecond = 33;
+
+        File soundFile = new File("source/sound/briefcase-lock-5.wav");
+        clip = AudioSystem.getClip();
+        try {
+            AudioInputStream inputStream = AudioSystem.getAudioInputStream(soundFile);
+            clip.open(inputStream);
+        } catch (IOException e) {
+            System.err.println("fck you");
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("fck");
+        }
+
+//        long microLength = clip.getMicrosecondLength();
+//        long frameLength = (long) clip.getFrameLength();
+//        baseOfClip = 0;
+        // clip.setLoopPoints(baseOfClip, (int) (baseOfClip + periodMillisecond * frameLength / (microLength / 1000)));
 
     }
 
     // deal with the data
     @FXML
     protected void playVideo(ActionEvent event) {
+        // open the click sound
         if (!this.playVideo) {
             this.playVideo = true;
             // open the video
             this.capture = new VideoCapture("source/video/test.mp4");
-            if (this.capture != null && this.capture.isOpened()) {
+            if (this.capture.isOpened()) {
                 // create a frameGrabber
                 Runnable frameGrabber = new Runnable() {
-
                     @Override
                     public void run() {
                         // grabe the frame from the video
                         Mat frame = grabFrame();
-                        if(!frame.empty()){
+                        if (!frame.empty()) {
+                            clip.stop();
+                            clip.setFramePosition(0);
+                            clip.start();
                             // convert
                             Image imageToshow = Utilities.mat2Image(frame);
                             // add a click sound before update the frame
-                            updateImageView(currentFrame, imageToshow);
-                            playClick();
-                        } else{
+                            updateVideoView(currentFrame, imageToshow);
+                            updateHistogramView(imageToshow);
+                            //playClick();
+                        } else {
                             // end of the video
                             capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
                         }
@@ -116,7 +135,7 @@ public class VideoPlayerController {
                     }
                 };
                 this.timer = Executors.newSingleThreadScheduledExecutor();
-                this.timer.scheduleAtFixedRate(frameGrabber, 0, 33, TimeUnit.MILLISECONDS);
+                this.timer.scheduleAtFixedRate(frameGrabber, 0, 1000, TimeUnit.MILLISECONDS);
                 this.button.setText("Stop");
             } else {
                 // the capture cannot be opened
@@ -169,14 +188,33 @@ public class VideoPlayerController {
         }
     }
 
-    private void updateImageView(ImageView view, Image image) {
+    private void updateVideoView(ImageView view, Image image) {
         Utilities.onFXThread(view.imageProperty(), image);
     }
-    private void playClick(){
-        mediaPlayer.play();
+
+    private void updateHistogramView(Image image){
+
     }
 
-    private void playFrame(Mat image) throws LineUnavailableException{
+    private void playClick() {
+        String musicFile = "source/sound/electric-typewriter.mp3";
+        Media sound = new Media(new File(musicFile).toURI().toString());
+        mediaPlayer = new MediaPlayer(sound);
+//        mediaPlayer.setStartTime(Duration.millis(1));
+//        mediaPlayer.setStopTime(Duration.millis(10));
+        mediaPlayer.play();
+        int count = 10000;
+        while (count > 0) {
+            count--;
+        }
+        mediaPlayer.stop();
+        //mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING
+//        while(mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING){
+//            System.out.println(mediaPlayer.getStatus());
+//        }
+    }
+
+    private void playFrame(Mat image) throws LineUnavailableException {
         if (!image.empty()) {
             // convert RGB into greyscale
             Mat grayImage = new Mat();
