@@ -1,6 +1,5 @@
 package core.view;
 
-import core.MainApp;
 import core.util.Utilities;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -57,8 +56,6 @@ public class VideoPlayerController {
     // for click sound
     private MediaPlayer mediaPlayer;
     private Clip clip;
-    private int periodMillisecond;
-    private int baseOfClip;
 
     // parameter for hitogram
     private int histoWidth;
@@ -89,23 +86,16 @@ public class VideoPlayerController {
             freq[m] = freq[m + 1] * Math.pow(2, -1.0 / 12.0);
         }
 
-        periodMillisecond = 33;
-
         File soundFile = new File("source/sound/briefcase-lock-5.wav");
         clip = AudioSystem.getClip();
         try {
             AudioInputStream inputStream = AudioSystem.getAudioInputStream(soundFile);
             clip.open(inputStream);
         } catch (IOException e) {
-            System.err.println("fck you");
+            System.err.println("Cannot open the clip file.");
         } catch (UnsupportedAudioFileException e) {
-            System.err.println("fck");
+            System.err.println("Wrong file format for clip.");
         }
-
-//        long microLength = clip.getMicrosecondLength();
-//        long frameLength = (long) clip.getFrameLength();
-//        baseOfClip = 0;
-        // clip.setLoopPoints(baseOfClip, (int) (baseOfClip + periodMillisecond * frameLength / (microLength / 1000)));
 
     }
 
@@ -134,18 +124,17 @@ public class VideoPlayerController {
                             capture.set(Videoio.CAP_PROP_POS_FRAMES, toSetFrameNumber);
                             sliderDragged = false; // set back to false
                         } else {
-                            // grabe the frame from the video
+                            // grab the frame from the video
                             Mat frame = grabFrame();
                             if (!frame.empty()) {
+                                // play the clip
                                 clip.stop();
                                 clip.setFramePosition(0);
                                 clip.start();
                                 // convert
                                 Image imageToshow = Utilities.mat2Image(frame);
-                                // add a click sound before update the frame
                                 updateVideoView(currentFrame, imageToshow);
                                 updateHistogramView(imageToshow);
-                                //playClick();
                                 double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
                                 double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
                                 slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
@@ -178,10 +167,8 @@ public class VideoPlayerController {
     @FXML
     protected void slidDrag() {
         // After drag done
-
         this.sliderDragged = true;
-
-
+        // detec whether the capture is opened
     }
 
     private Mat grabFrame() {
@@ -227,24 +214,25 @@ public class VideoPlayerController {
     private void updateHistogramView(Image image) {
     }
 
+    /*
+        This method fails to play the audio.
+     */
     private void playClick() {
         String musicFile = "source/sound/electric-typewriter.mp3";
         Media sound = new Media(new File(musicFile).toURI().toString());
         mediaPlayer = new MediaPlayer(sound);
-//        mediaPlayer.setStartTime(Duration.millis(1));
-//        mediaPlayer.setStopTime(Duration.millis(10));
+        mediaPlayer.setStartTime(Duration.millis(1));
+        mediaPlayer.setStopTime(Duration.millis(10));
         mediaPlayer.play();
         int count = 10000;
         while (count > 0) {
             count--;
         }
         mediaPlayer.stop();
-        //mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING
-//        while(mediaPlayer.getStatus() == MediaPlayer.Status.PLAYING){
-//            System.out.println(mediaPlayer.getStatus());
-//        }
     }
-
+    /*
+        The precoded method to play the image
+     */
     private void playFrame(Mat image) throws LineUnavailableException {
         if (!image.empty()) {
             // convert RGB into greyscale
