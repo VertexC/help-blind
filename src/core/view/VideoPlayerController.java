@@ -1,5 +1,6 @@
 package core.view;
 
+import core.MainApp;
 import core.util.Utilities;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -38,6 +39,7 @@ public class VideoPlayerController {
     @FXML
     private ImageView histogram;
 
+    // for video
     private VideoCapture capture = new VideoCapture();
     private boolean playVideo = false;
 
@@ -64,6 +66,9 @@ public class VideoPlayerController {
     // for slider
     private boolean sliderDragged;
 
+    // for exchange data
+    private MainApp mainApp;
+
     @FXML
     private void initialize() throws LineUnavailableException {
         // for audio
@@ -86,6 +91,7 @@ public class VideoPlayerController {
             freq[m] = freq[m + 1] * Math.pow(2, -1.0 / 12.0);
         }
 
+        // for click sound
         File soundFile = new File("source/sound/briefcase-lock-5.wav");
         clip = AudioSystem.getClip();
         try {
@@ -97,6 +103,7 @@ public class VideoPlayerController {
             System.err.println("Wrong file format for clip.");
         }
 
+        // for video capture
     }
 
     // deal with the data
@@ -106,7 +113,8 @@ public class VideoPlayerController {
         if (!this.playVideo) {
             this.playVideo = true;
             // open the video
-            this.capture = new VideoCapture("source/video/test.mp4");
+            // this.capture = new VideoCapture("source/video/test.mp4");
+            setCapture();
             if (this.capture.isOpened()) {
                 // create a frameGrabber
                 Runnable frameGrabber = new Runnable() {
@@ -151,7 +159,9 @@ public class VideoPlayerController {
                 this.button.setText("Stop");
             } else {
                 // the capture cannot be opened
+                // creat a warning dialog here
                 System.err.println("Cannot open the video at " + "source/video/test.mp4");
+
             }
 
         } else {
@@ -167,8 +177,14 @@ public class VideoPlayerController {
     @FXML
     protected void slidDrag() {
         // After drag done
-        this.sliderDragged = true;
-        // detec whether the capture is opened
+        if(capture.isOpened()){
+            this.sliderDragged = true;
+        }
+        // detect whether the capture is opened
+    }
+
+    public void setCapture(){
+        this.capture = new VideoCapture(mainApp.getOpenedFilePath());
     }
 
     private Mat grabFrame() {
@@ -280,5 +296,8 @@ public class VideoPlayerController {
         }
     }
 
+    public void setMainApp(MainApp mainApp){
+        this.mainApp = mainApp;
+    }
 
 }

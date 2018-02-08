@@ -7,6 +7,8 @@ import javafx.fxml.FXML;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import java.io.File;
+
 public class RootLayoutController {
 
     private Stage rootStage;
@@ -24,6 +26,9 @@ public class RootLayoutController {
         Stage dialogStage = new Stage();
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open the Source File");
-        fileChooser.showOpenDialog(dialogStage);
+        File file = fileChooser.showOpenDialog(dialogStage);
+        if (file != null){
+            mainApp.setOpenedFilePath(file.getPath());
+        }
     }
 }
