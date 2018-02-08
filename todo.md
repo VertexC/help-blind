@@ -7,10 +7,10 @@ Note:
 * Play the video
 * drag slider
 * click sound
+* open the video file using file chooser (required)
 
 **Todo:**
-* open the video file using file chooser (required) - Bob
-* Show histogram of frame
+* Show histogram of frame — Bob
 * Show the time of video
 * Show basic information of video
 * add CSS to UI
