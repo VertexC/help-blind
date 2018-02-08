@@ -5,6 +5,7 @@ import core.util.Utilities;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
@@ -111,18 +112,18 @@ public class VideoPlayerController {
     protected void playVideo(ActionEvent event) {
         // open the click sound
         if (!this.playVideo) {
-            this.playVideo = true;
             // open the video
             // this.capture = new VideoCapture("source/video/test.mp4");
             setCapture();
             if (this.capture.isOpened()) {
+                this.playVideo = true;
                 // create a frameGrabber
                 Runnable frameGrabber = new Runnable() {
                     @Override
                     public void run() {
                         // detect slider
                         if (sliderDragged) {
-                            System.out.println(sliderDragged);
+                            // System.out.println(sliderDragged);
                             // after slider is dragged, set the video capture to that frame
                             double currentSliderPosition = slider.getValue();
                             double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
@@ -159,11 +160,14 @@ public class VideoPlayerController {
                 this.button.setText("Stop");
             } else {
                 // the capture cannot be opened
-                // creat a warning dialog here
-                System.err.println("Cannot open the video at " + "source/video/test.mp4");
-
+                // how alert
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Warning");
+                alert.setHeaderText("Warning Dialog");
+                alert.setContentText("The capture is not open!");
+                alert.showAndWait();
+                // System.err.println("Cannot open the video at " + "source/video/test.mp4");
             }
-
         } else {
             // the camera is not active
             this.playVideo = false;
@@ -184,7 +188,10 @@ public class VideoPlayerController {
     }
 
     public void setCapture(){
-        this.capture = new VideoCapture(mainApp.getOpenedFilePath());
+        String path = mainApp.getOpenedFilePath();
+        if(path != null){
+            this.capture = new VideoCapture(mainApp.getOpenedFilePath());
+        }
     }
 
     private Mat grabFrame() {
