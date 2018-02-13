@@ -3,6 +3,8 @@ package core.view;
 import core.MainApp;
 import core.util.Utilities;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 
@@ -108,6 +110,19 @@ public class VideoPlayerController {
         }
 
         // for video capture
+        slider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                sliderDragged = true;
+                if (capture.isOpened()) {
+                    double currentSliderPosition = slider.getValue();
+                    double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
+                    double toSetFrameNumber;
+                    toSetFrameNumber = (currentSliderPosition - slider.getMin())
+                            / (slider.getMax() - slider.getMin()) * totalFrameCount;
+                    capture.set(Videoio.CAP_PROP_POS_FRAMES, toSetFrameNumber);
+                }
+            }
+        });
     }
 
     private double[][] processImage(Mat image) {
@@ -124,14 +139,14 @@ public class VideoPlayerController {
         double[][] roundedImage = new double[resizedImage.rows()][resizedImage.cols()];
         for (int row = 0; row < resizedImage.rows(); row++) {
             for (int col = 0; col < resizedImage.cols(); col++) {
-                roundedImage[row][col] = (double)Math.floor(resizedImage.get(row, col)[0]/ numberOfQuantizationLevels) / numberOfQuantizationLevels;
+                roundedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / numberOfQuantizationLevels) / numberOfQuantizationLevels;
             }
         }
         return roundedImage;
     }
 
-    private void playAudio(Mat image) throws LineUnavailableException{
-        if(!image.empty()) {
+    private void playAudio(Mat image) throws LineUnavailableException {
+        if (!image.empty()) {
             double[][] roundedImage = processImage(image);
 
             // I used an AudioFormat object and a SourceDataLine object to perform audio output. Feel free to try other options
@@ -147,36 +162,38 @@ public class VideoPlayerController {
                 private SourceDataLine sourceDataLine;
 
                 public AudioPlayer(double[][] roundedImage, SourceDataLine sourceDataLine) {
-                    this.roundedImage = roundedImage; this.sourceDataLine = sourceDataLine;
+                    this.roundedImage = roundedImage;
+                    this.sourceDataLine = sourceDataLine;
                 }
 
                 private void writeAudio(double[][] roundedImage, SourceDataLine sourceDataLine) {
                     // for each row:
                     // generate audio buffer, and play (write)
-                    col ++;
-                    if(col < width) {
+                    col++;
+                    if (col < width) {
                         byte[] audioBuffer = new byte[numberOfSamplesPerColumn];
                         for (int t = 1; t <= numberOfSamplesPerColumn; t++) {
                             double signal = 0;
                             for (int row = 0; row < height; row++) {
                                 int m = height - row - 1; // Be sure you understand why it is height rather width, and why we subtract 1
                                 int time = t + col * numberOfSamplesPerColumn;
-                                double ss = Math.sin(2 * Math.PI * freq[m] * (double)time/sampleRate);
+                                double ss = Math.sin(2 * Math.PI * freq[m] * (double) time / sampleRate);
                                 signal += roundedImage[row][col] * ss;
                             }
                             double normalizedSignal = signal / height; // signal: [-height, height];  normalizedSignal: [-1, 1]
-                            audioBuffer[t-1] = (byte) (normalizedSignal*0x7F); // Be sure you understand what the weird number 0x7F is for
+                            audioBuffer[t - 1] = (byte) (normalizedSignal * 0x7F); // Be sure you understand what the weird number 0x7F is for
                         }
                         sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
                     } else {
                         // want to modify UI in fx. must use Platform.runLater();
-                        Platform.runLater(()->{
+                        Platform.runLater(() -> {
                                     sourceDataLine.drain();
                                     sourceDataLine.close();
                                 }
                         );
                     }
                 }
+
                 public void run() {
                     this.writeAudio(this.roundedImage, this.sourceDataLine);
                 }
@@ -189,6 +206,7 @@ public class VideoPlayerController {
         }
 
     }
+
     // deal with the data
     @FXML
     protected void playVideo(ActionEvent event) {
@@ -203,42 +221,29 @@ public class VideoPlayerController {
                 Runnable frameGrabber = new Runnable() {
                     @Override
                     public void run() {
-                        // detect slider
-                        if (sliderDragged) {
-                            // System.out.println(sliderDragged);
-                            // after slider is dragged, set the video capture to that frame
-                            double currentSliderPosition = slider.getValue();
-                            double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
-                            double toSetFrameNumber;
-                            toSetFrameNumber = (currentSliderPosition - slider.getMin())
-                                    / (slider.getMax() - slider.getMin()) * totalFrameCount;
-                            capture.set(Videoio.CAP_PROP_POS_FRAMES, toSetFrameNumber);
-                            sliderDragged = false; // set back to false
-                        } else {
-                            // grab the frame from the video
-                            Mat frame = grabFrame();
-                            if (!frame.empty()) {
-                                // play audio
-                                Image imageToshow = Utilities.mat2Image(frame);
-                                updateVideoView(currentFrame, imageToshow);
-                                updateHistogramView(imageToshow);
-                                try {
-                                    playAudio(frame);
-                                } catch (Exception e) {
-                                    System.err.println("Exception: " + e);
-                                }
-                                double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
-                                double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
-                                slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
-
-                                // play the clip
-                                clip.stop();
-                                clip.setFramePosition(0);
-                                clip.start();
-                            } else {
-                                // end of the video
-                                capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
+                        // grab the frame from the video
+                        Mat frame = grabFrame();
+                        if (!frame.empty()) {
+                            // play audio
+                            Image imageToshow = Utilities.mat2Image(frame);
+                            updateVideoView(currentFrame, imageToshow);
+                            updateHistogramView(imageToshow);
+                            try {
+                                playAudio(frame);
+                            } catch (Exception e) {
+                                System.err.println("Exception: " + e);
                             }
+                            double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
+                            double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
+                            slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
+
+                            // play the clip
+                            clip.stop();
+                            clip.setFramePosition(0);
+                            clip.start();
+                        } else {
+                            // end of the video
+                            capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
                         }
                     }
                 };
@@ -262,18 +267,18 @@ public class VideoPlayerController {
         }
     }
 
-    @FXML
-    protected void slidDrag() {
-        // After drag done
-        if(capture.isOpened()){
-            this.sliderDragged = true;
-        }
-        // detect whether the capture is opened
-    }
+//    @FXML
+//    protected void slidDrag() {
+//        // After drag done
+//        if(capture.isOpened()){
+//            this.sliderDragged = false;
+//        }
+//        // detect whether the capture is opened
+//    }
 
-    public void setCapture(){
+    public void setCapture() {
         String path = mainApp.getOpenedFilePath();
-        if(path != null){
+        if (path != null) {
             this.capture.open(mainApp.getOpenedFilePath());
         }
     }
@@ -309,7 +314,7 @@ public class VideoPlayerController {
     }
 
     private void stopTimer(ScheduledExecutorService timer) {
-        if(timer != null && !timer.isShutdown()) {
+        if (timer != null && !timer.isShutdown()) {
             try {
                 timer.shutdown();
                 timer.awaitTermination(videoTimerPeriod, TimeUnit.MILLISECONDS);
@@ -320,7 +325,7 @@ public class VideoPlayerController {
     }
 
     private void releaseVideo() {
-        if(this.capture.isOpened()) {
+        if (this.capture.isOpened()) {
             this.capture.release();
         }
     }
@@ -348,10 +353,11 @@ public class VideoPlayerController {
         }
         mediaPlayer.stop();
     }
+
     /*
         The precoded method to play the image
      */
-    public void setMainApp(MainApp mainApp){
+    public void setMainApp(MainApp mainApp) {
         this.mainApp = mainApp;
     }
 
