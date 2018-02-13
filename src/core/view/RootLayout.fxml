@@ -12,7 +12,7 @@
         <menus>
           <Menu mnemonicParsing="false" text="File">
             <items>
-              <MenuItem mnemonicParsing="false" onAction="#handleImport" text="Import File" />
+              <MenuItem mnemonicParsing="false" onAction="#openVideo" text="Open Video..." />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Edit">

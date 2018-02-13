@@ -2,6 +2,7 @@ package core.view;
 
 import core.MainApp;
 import core.util.Utilities;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 
@@ -24,7 +25,6 @@ import org.opencv.videoio.Videoio;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class VideoPlayerController {
 
     @FXML
-    private Button button;
+    private Button playVideoButton;
     @FXML
     private ImageView currentFrame;
     @FXML
@@ -42,9 +42,12 @@ public class VideoPlayerController {
 
     // for video
     private VideoCapture capture = new VideoCapture();
-    private boolean playVideo = false;
+    private boolean playVideoStatus = false;
+    private int videoTimerPeriod = 4000;  // 4000 ms
+    private int audioTimerPeriod = 40;  // 40 ms
 
-    private ScheduledExecutorService timer;
+    private ScheduledExecutorService videoTimer;
+    private ScheduledExecutorService soundTimer;
 
     // parameter to resize and play the frame with sound
     private int width;
@@ -52,7 +55,7 @@ public class VideoPlayerController {
     private int sampleRate;
     private int sampleSizeInBits;
     private int numberOfChannels;
-    private int quantizationLevel;
+    private int numberOfQuantizationLevels;
     private int numberOfSamplesPerColumn;
     private double[] freq; //frequency to play the sound
 
@@ -79,7 +82,7 @@ public class VideoPlayerController {
         sampleRate = 8000;
         sampleSizeInBits = 8;
         numberOfChannels = 1;
-        quantizationLevel = 16;
+        numberOfQuantizationLevels = 16;
         numberOfSamplesPerColumn = 500;
 
         // set the frequency on each col
@@ -107,16 +110,95 @@ public class VideoPlayerController {
         // for video capture
     }
 
+    private double[][] processImage(Mat image) {
+        // grayscale, resize, quantization
+        //
+        Mat grayImage = new Mat();
+        Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
+        // resize the image
+        Mat resizedImage = new Mat();
+        Imgproc.resize(grayImage, resizedImage, new Size(width, height));
+
+        // quantization
+        // compressing a range of values to a single quantum value
+        double[][] roundedImage = new double[resizedImage.rows()][resizedImage.cols()];
+        for (int row = 0; row < resizedImage.rows(); row++) {
+            for (int col = 0; col < resizedImage.cols(); col++) {
+                roundedImage[row][col] = (double)Math.floor(resizedImage.get(row, col)[0]/ numberOfQuantizationLevels) / numberOfQuantizationLevels;
+            }
+        }
+        return roundedImage;
+    }
+
+    private void playAudio(Mat image) throws LineUnavailableException{
+        if(!image.empty()) {
+            double[][] roundedImage = processImage(image);
+
+            // I used an AudioFormat object and a SourceDataLine object to perform audio output. Feel free to try other options
+            AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, numberOfChannels, true, true);
+            SourceDataLine sourceDataLine = AudioSystem.getSourceDataLine(audioFormat);
+            sourceDataLine.open(audioFormat, sampleRate);
+            sourceDataLine.start();
+            // begin to write to sourceDataLine and play
+
+            class AudioPlayer implements Runnable {
+                private int col = 0;
+                private double[][] roundedImage;
+                private SourceDataLine sourceDataLine;
+
+                public AudioPlayer(double[][] roundedImage, SourceDataLine sourceDataLine) {
+                    this.roundedImage = roundedImage; this.sourceDataLine = sourceDataLine;
+                }
+
+                private void writeAudio(double[][] roundedImage, SourceDataLine sourceDataLine) {
+                    // for each row:
+                    // generate audio buffer, and play (write)
+                    col ++;
+                    if(col < width) {
+                        byte[] audioBuffer = new byte[numberOfSamplesPerColumn];
+                        for (int t = 1; t <= numberOfSamplesPerColumn; t++) {
+                            double signal = 0;
+                            for (int row = 0; row < height; row++) {
+                                int m = height - row - 1; // Be sure you understand why it is height rather width, and why we subtract 1
+                                int time = t + col * numberOfSamplesPerColumn;
+                                double ss = Math.sin(2 * Math.PI * freq[m] * (double)time/sampleRate);
+                                signal += roundedImage[row][col] * ss;
+                            }
+                            double normalizedSignal = signal / height; // signal: [-height, height];  normalizedSignal: [-1, 1]
+                            audioBuffer[t-1] = (byte) (normalizedSignal*0x7F); // Be sure you understand what the weird number 0x7F is for
+                        }
+                        sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
+                    } else {
+                        // want to modify UI in fx. must use Platform.runLater();
+                        Platform.runLater(()->{
+                                    sourceDataLine.drain();
+                                    sourceDataLine.close();
+                                }
+                        );
+                    }
+                }
+                public void run() {
+                    this.writeAudio(this.roundedImage, this.sourceDataLine);
+                }
+            }
+            this.soundTimer = Executors.newSingleThreadScheduledExecutor();
+            AudioPlayer colPlayer = new AudioPlayer(roundedImage, sourceDataLine);
+            this.soundTimer.scheduleAtFixedRate(colPlayer, 0, this.audioTimerPeriod, TimeUnit.MILLISECONDS);
+        } else {
+
+        }
+
+    }
     // deal with the data
     @FXML
     protected void playVideo(ActionEvent event) {
         // open the click sound
-        if (!this.playVideo) {
+        if (!this.playVideoStatus) {
             // open the video
             // this.capture = new VideoCapture("source/video/test.mp4");
             setCapture();
             if (this.capture.isOpened()) {
-                this.playVideo = true;
+                this.playVideoStatus = true;
                 // create a frameGrabber
                 Runnable frameGrabber = new Runnable() {
                     @Override
@@ -144,6 +226,11 @@ public class VideoPlayerController {
                                 Image imageToshow = Utilities.mat2Image(frame);
                                 updateVideoView(currentFrame, imageToshow);
                                 updateHistogramView(imageToshow);
+                                try {
+                                    playAudio(frame);
+                                } catch (Exception e) {
+                                    System.err.println("Exception: " + e);
+                                }
                                 double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
                                 double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
                                 slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
@@ -155,9 +242,9 @@ public class VideoPlayerController {
                         }
                     }
                 };
-                this.timer = Executors.newSingleThreadScheduledExecutor();
-                this.timer.scheduleAtFixedRate(frameGrabber, 0, 1000, TimeUnit.MILLISECONDS);
-                this.button.setText("Stop");
+                this.videoTimer = Executors.newSingleThreadScheduledExecutor();
+                this.videoTimer.scheduleAtFixedRate(frameGrabber, 0, videoTimerPeriod, TimeUnit.MILLISECONDS);
+                this.playVideoButton.setText("Stop");
             } else {
                 // the capture cannot be opened
                 // how alert
@@ -170,11 +257,8 @@ public class VideoPlayerController {
             }
         } else {
             // the camera is not active
-            this.playVideo = false;
-            // update the button content
-            this.button.setText("Play");
-            // stop the timer
-            this.stopAcquisition();
+            // stop the videoTimer
+            this.stopPlaying();
         }
     }
 
@@ -190,7 +274,7 @@ public class VideoPlayerController {
     public void setCapture(){
         String path = mainApp.getOpenedFilePath();
         if(path != null){
-            this.capture = new VideoCapture(mainApp.getOpenedFilePath());
+            this.capture.open(mainApp.getOpenedFilePath());
         }
     }
 
@@ -214,18 +298,29 @@ public class VideoPlayerController {
         return frame;
     }
 
-    private void stopAcquisition() {
-        if (this.timer != null && !this.timer.isShutdown()) {
+
+    private void stopPlaying() {
+        this.playVideoStatus = false;
+        // update the playVideoButton content
+        this.playVideoButton.setText("Play");
+        stopTimer(soundTimer);
+        stopTimer(videoTimer);
+        releaseVideo();
+    }
+
+    private void stopTimer(ScheduledExecutorService timer) {
+        if(timer != null && !timer.isShutdown()) {
             try {
-                // stop the timer
-                this.timer.shutdown();
-                this.timer.awaitTermination(33, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-                System.err.println("Exception in stopping the frame capture, trying to release the video..." + e);
+                timer.shutdown();
+                timer.awaitTermination(videoTimerPeriod, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                System.err.println("exception: " + e);
             }
         }
+    }
 
-        if (this.capture.isOpened()) {
+    private void releaseVideo() {
+        if(this.capture.isOpened()) {
             this.capture.release();
         }
     }
@@ -256,53 +351,6 @@ public class VideoPlayerController {
     /*
         The precoded method to play the image
      */
-    private void playFrame(Mat image) throws LineUnavailableException {
-        if (!image.empty()) {
-            // convert RGB into greyscale
-            Mat grayImage = new Mat();
-            Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
-
-            // resize the image
-            Mat resizedImage = new Mat();
-            Imgproc.resize(grayImage, resizedImage, new Size(width, height));
-
-            // quantization
-            double[][] roundedImage = new double[grayImage.rows()][grayImage.cols()];
-            for (int row = 0; row < resizedImage.rows(); row++) {
-                for (int col = 0; col < resizedImage.cols(); col++) {
-                    roundedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / (Math.pow(2, 8) / quantizationLevel)) / quantizationLevel;
-                }
-            }
-
-            // I used an AudioFormat object and a SourceDataLine object to perform audio output. Feel free to try other options
-            AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, numberOfChannels, true, true);
-            SourceDataLine sourceDataLine = AudioSystem.getSourceDataLine(audioFormat);
-            sourceDataLine.open(audioFormat, sampleRate);
-            sourceDataLine.start();
-
-            for (int col = 0; col < width; col++) {
-                byte[] audioBuffer = new byte[numberOfSamplesPerColumn];
-                for (int t = 1; t <= numberOfSamplesPerColumn; t++) {
-                    double signal = 0;
-                    for (int row = 0; row < height; row++) {
-                        int m = height - row - 1; // Be sure you understand why it is height rather width, and why we subtract 1
-                        int time = t + col * numberOfSamplesPerColumn;
-                        double ss = Math.sin(2 * Math.PI * freq[m] * (double) time / sampleRate);
-                        signal += roundedImage[row][col] * ss;
-                    }
-                    double normalizedSignal = signal / height; // signal: [-height, height];  normalizedSignal: [-1, 1]
-                    audioBuffer[t - 1] = (byte) (normalizedSignal * 0x7F); // Be sure you understand what the weird number 0x7F is for
-                }
-                sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
-            }
-            sourceDataLine.drain();
-            sourceDataLine.close();
-
-        } else {
-            System.err.println("Cannot play sounds from frame as it is empty.");
-        }
-    }
-
     public void setMainApp(MainApp mainApp){
         this.mainApp = mainApp;
     }

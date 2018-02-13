@@ -22,7 +22,7 @@ public class RootLayoutController {
         this.mainApp = mainApp;
     }
     @FXML
-    private void handleImport(){
+    private void openVideo(){
         Stage dialogStage = new Stage();
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open the Source File");
