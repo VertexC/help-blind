@@ -218,11 +218,7 @@ public class VideoPlayerController {
                             // grab the frame from the video
                             Mat frame = grabFrame();
                             if (!frame.empty()) {
-                                // play the clip
-                                clip.stop();
-                                clip.setFramePosition(0);
-                                clip.start();
-                                // convert
+                                // play audio
                                 Image imageToshow = Utilities.mat2Image(frame);
                                 updateVideoView(currentFrame, imageToshow);
                                 updateHistogramView(imageToshow);
@@ -235,6 +231,10 @@ public class VideoPlayerController {
                                 double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
                                 slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
 
+                                // play the clip
+                                clip.stop();
+                                clip.setFramePosition(0);
+                                clip.start();
                             } else {
                                 // end of the video
                                 capture.set(Videoio.CAP_PROP_POS_FRAMES, 0);
