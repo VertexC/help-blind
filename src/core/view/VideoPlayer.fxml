@@ -8,7 +8,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="core.view.VideoPlayerController">
+<AnchorPane prefHeight="300.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="core.view.VideoPlayerController">
    <children>
       <ImageView fx:id="currentFrame" fitHeight="200.0" fitWidth="300.0" pickOnBounds="true" preserveRatio="true" AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="30.0" />
       <Slider fx:id="slider" layoutX="10.0" layoutY="210.0" prefHeight="16.0" prefWidth="300.0" AnchorPane.topAnchor="210.0" />
