@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -41,6 +42,8 @@ public class VideoPlayerController {
     private Slider slider;
     @FXML
     private ImageView histogram;
+    @FXML
+    private Label processLabel;
 
     // for video
     private VideoCapture capture = new VideoCapture();
@@ -236,7 +239,9 @@ public class VideoPlayerController {
                             double currentFrameNumber = capture.get(Videoio.CAP_PROP_POS_FRAMES);
                             double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
                             slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
-
+                            Platform.runLater(() -> {
+                                processLabel.setText("" + (int)currentFrameNumber + "/" + (int)totalFrameCount);
+                            });
                             // play the clip
                             clip.stop();
                             clip.setFramePosition(0);

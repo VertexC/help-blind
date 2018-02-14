@@ -54,7 +54,7 @@ public class MainApp extends Application{
             // load in FXML
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(MainApp.class.getResource("view/VideoPlayer.fxml"));
-            AnchorPane videoPlayer  = (AnchorPane) loader.load();
+            BorderPane videoPlayer = loader.load();
 
             // give the controller access to the main app
             VideoPlayerController controller = loader.getController();
