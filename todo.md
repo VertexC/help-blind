@@ -8,12 +8,15 @@ Note:
 * drag slider
 * click sound
 * open the video file using file chooser (required)
+* Show the time of video
 
 **Todo:**
 * Show histogram of frame — Bob
-* Show the time of video
 * Show basic information of video
-* add CSS to UI
+* add CSS to UI - Leo
+    * Use new theme
+    * Change the shape of play/stop button
+    * responsive design
 * Allow user to choose image or video
     * If image, play it with sounds
         * Generate the .midi file of sounds generated. (_This part can be changeable_)
