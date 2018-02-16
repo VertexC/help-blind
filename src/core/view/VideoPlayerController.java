@@ -230,6 +230,7 @@ public class VideoPlayerController {
                             // play audio
                             Image imageToshow = Utilities.mat2Image(frame);
                             updateVideoView(currentFrame, imageToshow);
+                            currentFrame.setFitWidth(700);
                             updateHistogramView(imageToshow);
                             try {
                                 playAudio(frame);
