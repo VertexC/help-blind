@@ -15,6 +15,7 @@ import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
+import javafx.scene.layout.StackPane;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
@@ -44,13 +45,15 @@ public class VideoPlayerController {
     private ImageView histogram;
     @FXML
     private Label processLabel;
-
+    @FXML
+    private StackPane stackPane;
     // for video
     private VideoCapture capture = new VideoCapture();
     private boolean playVideoStatus = false;
     private int videoTimerPeriod = 4000;  // 4000 ms
     private int audioTimerPeriod = 40;  // 40 ms
-
+    private int framewidth = 700;
+    private int frameheight = 400;
     private ScheduledExecutorService videoTimer;
     private ScheduledExecutorService soundTimer;
 
@@ -226,11 +229,16 @@ public class VideoPlayerController {
                     public void run() {
                         // grab the frame from the video
                         Mat frame = grabFrame();
-                        if (!frame.empty()) {
+                        double ratio = frame.height() * 1.0 / frame.width();
+                        Mat resizedFrame = new Mat();
+                        Imgproc.resize(frame, resizedFrame, new Size(framewidth, (framewidth * ratio) > frameheight?frameheight:(framewidth * ratio)));
+                        if (!resizedFrame.empty()) {
                             // play audio
-                            Image imageToshow = Utilities.mat2Image(frame);
+                            stackPane.setPrefWidth(framewidth);
+                            stackPane.setPrefHeight(frameheight);
+                            Image imageToshow = Utilities.mat2Image(resizedFrame);
+                            currentFrame.setFitWidth(framewidth);
                             updateVideoView(currentFrame, imageToshow);
-                            currentFrame.setFitWidth(700);
                             updateHistogramView(imageToshow);
                             try {
                                 playAudio(frame);
@@ -272,15 +280,6 @@ public class VideoPlayerController {
             this.stopPlaying();
         }
     }
-
-//    @FXML
-//    protected void slidDrag() {
-//        // After drag done
-//        if(capture.isOpened()){
-//            this.sliderDragged = false;
-//        }
-//        // detect whether the capture is opened
-//    }
 
     public void setCapture() {
         String path = mainApp.getOpenedFilePath();
