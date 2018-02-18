@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.chart.*?>
 <?import java.lang.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
@@ -54,11 +55,17 @@
                <font>
                   <Font size="20.0" />
                </font></Label>
-             <ImageView fx:id="histogram" fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
-                 <viewport>
-                     <Rectangle2D />
-                 </viewport>
-             </ImageView>
+            <BarChart fx:id="histogram">
+              <xAxis>
+                <CategoryAxis side="BOTTOM" fx:id="xAxis" />
+              </xAxis>
+              <yAxis>
+                <NumberAxis side="LEFT" />
+              </yAxis>
+               <VBox.margin>
+                  <Insets left="20.0" right="20.0" top="30.0" />
+               </VBox.margin>
+            </BarChart>
          </children>
          <padding>
             <Insets bottom="40.0" left="10.0" right="10.0" top="40.0" />

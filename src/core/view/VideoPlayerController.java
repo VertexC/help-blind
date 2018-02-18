@@ -5,9 +5,14 @@ import core.util.Utilities;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -29,6 +34,8 @@ import org.opencv.videoio.Videoio;
 import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -42,11 +49,16 @@ public class VideoPlayerController {
     @FXML
     private Slider slider;
     @FXML
-    private ImageView histogram;
+    private BarChart<String, Integer> histogram;
+    @FXML
+    private CategoryAxis xAxis;
     @FXML
     private Label processLabel;
     @FXML
     private StackPane stackPane;
+    // for histogram
+    private ObservableList<String> valueRange = FXCollections.observableArrayList();
+
     // for video
     private VideoCapture capture = new VideoCapture();
     private boolean playVideoStatus = false;
@@ -57,7 +69,7 @@ public class VideoPlayerController {
     private ScheduledExecutorService videoTimer;
     private ScheduledExecutorService soundTimer;
 
-    // parameter to resize and play the frame with sound
+    // parameter to resize and play the frame with sound and histogram
     private int width;
     private int height;
     private int sampleRate;
@@ -70,13 +82,6 @@ public class VideoPlayerController {
     // for click sound
     private MediaPlayer mediaPlayer;
     private Clip clip;
-
-    // parameter for hitogram
-    private int histoWidth;
-    private int histoHeight;
-
-    // for slider
-    private boolean sliderDragged;
 
     // for exchange data
     private MainApp mainApp;
@@ -118,7 +123,6 @@ public class VideoPlayerController {
         // for video capture
         slider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                sliderDragged = true;
                 if (capture.isOpened()) {
                     double currentSliderPosition = slider.getValue();
                     double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
@@ -129,6 +133,14 @@ public class VideoPlayerController {
                 }
             }
         });
+
+        // for histogram
+        String[] ranges = new String[numberOfQuantizationLevels];
+        for (int i = 0; i < numberOfQuantizationLevels; i++) {
+            ranges[i] = Integer.toString(i * numberOfQuantizationLevels) + " - " + Integer.toString(i * numberOfQuantizationLevels + numberOfQuantizationLevels - 1);
+        }
+        valueRange.addAll(Arrays.asList(ranges));
+        xAxis.setCategories(valueRange);
     }
 
     private double[][] processImage(Mat image) {
@@ -145,7 +157,7 @@ public class VideoPlayerController {
         double[][] roundedImage = new double[resizedImage.rows()][resizedImage.cols()];
         for (int row = 0; row < resizedImage.rows(); row++) {
             for (int col = 0; col < resizedImage.cols(); col++) {
-                roundedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / numberOfQuantizationLevels) / numberOfQuantizationLevels;
+                roundedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / (256 / numberOfQuantizationLevels)) / numberOfQuantizationLevels;
             }
         }
         return roundedImage;
@@ -154,7 +166,6 @@ public class VideoPlayerController {
     private void playAudio(Mat image) throws LineUnavailableException {
         if (!image.empty()) {
             double[][] roundedImage = processImage(image);
-
             // I used an AudioFormat object and a SourceDataLine object to perform audio output. Feel free to try other options
             AudioFormat audioFormat = new AudioFormat(sampleRate, sampleSizeInBits, numberOfChannels, true, true);
             SourceDataLine sourceDataLine = AudioSystem.getSourceDataLine(audioFormat);
@@ -231,7 +242,7 @@ public class VideoPlayerController {
                         Mat frame = grabFrame();
                         double ratio = frame.height() * 1.0 / frame.width();
                         Mat resizedFrame = new Mat();
-                        Imgproc.resize(frame, resizedFrame, new Size(framewidth, (framewidth * ratio) > frameheight?frameheight:(framewidth * ratio)));
+                        Imgproc.resize(frame, resizedFrame, new Size(framewidth, (framewidth * ratio) > frameheight ? frameheight : (framewidth * ratio)));
                         if (!resizedFrame.empty()) {
                             // play audio
                             stackPane.setPrefWidth(framewidth);
@@ -239,9 +250,9 @@ public class VideoPlayerController {
                             Image imageToshow = Utilities.mat2Image(resizedFrame);
                             currentFrame.setFitWidth(framewidth);
                             updateVideoView(currentFrame, imageToshow);
-                            updateHistogramView(imageToshow);
+                            updateHistogramView(resizedFrame);
                             try {
-                                playAudio(frame);
+                                playAudio(resizedFrame);
                             } catch (Exception e) {
                                 System.err.println("Exception: " + e);
                             }
@@ -249,7 +260,7 @@ public class VideoPlayerController {
                             double totalFrameCount = capture.get(Videoio.CAP_PROP_FRAME_COUNT);
                             slider.setValue(currentFrameNumber / totalFrameCount * (slider.getMax() - slider.getMin()));
                             Platform.runLater(() -> {
-                                processLabel.setText("" + (int)currentFrameNumber + "/" + (int)totalFrameCount);
+                                processLabel.setText("" + (int) currentFrameNumber + "/" + (int) totalFrameCount);
                             });
                             // play the clip
                             clip.stop();
@@ -339,24 +350,39 @@ public class VideoPlayerController {
         Utilities.onFXThread(view.imageProperty(), image);
     }
 
-    private void updateHistogramView(Image image) {
+    private void updateHistogramView(Mat resizedFrame) {
+        double[][] processedImage = processImage(resizedFrame);
+        // make the frame into grey
+        // build up the histogram according to its grey value
+
+        class updateChart implements Runnable {
+            @Override
+            public void run() {
+                int group[] = new int[numberOfQuantizationLevels]; // 0 - 15, 16 - 31, ..., 240 - 255
+                for (int i = 0; i < numberOfQuantizationLevels; i++) {
+                    group[i] = 0;
+                }
+                for (int i = 0; i < height; i++) {
+                    for (int j = 0; j < width; j++) {
+                        group[(int) Math.floor(processedImage[i][j] * numberOfQuantizationLevels)] += 1;
+                    }
+                }
+                XYChart.Series<String, Integer> series = createHistogramSeries(group);
+                // put the data into barchart
+                histogram.getData().add(series);
+            }
+        }
+
+
     }
 
-    /*
-        This method fails to play the audio.
-     */
-    private void playClick() {
-        String musicFile = "source/sound/electric-typewriter.mp3";
-        Media sound = new Media(new File(musicFile).toURI().toString());
-        mediaPlayer = new MediaPlayer(sound);
-        mediaPlayer.setStartTime(Duration.millis(1));
-        mediaPlayer.setStopTime(Duration.millis(10));
-        mediaPlayer.play();
-        int count = 10000;
-        while (count > 0) {
-            count--;
+    private XYChart.Series<String, Integer> createHistogramSeries(int[] group) {
+        XYChart.Series<String, Integer> series = new XYChart.Series<String, Integer>();
+        for (int i = 0; i < group.length; i++) {
+            XYChart.Data<String, Integer> data = new XYChart.Data<String, Integer>(valueRange.get(i), group[i]);
+            series.getData().add(data);
         }
-        mediaPlayer.stop();
+        return series;
     }
 
     /*
