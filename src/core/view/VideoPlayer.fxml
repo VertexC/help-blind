@@ -60,7 +60,7 @@
                 <CategoryAxis side="BOTTOM" fx:id="xAxis" />
               </xAxis>
               <yAxis>
-                <NumberAxis side="LEFT" />
+                <NumberAxis fx:id="yAxis" side="LEFT" />
               </yAxis>
                <VBox.margin>
                   <Insets left="20.0" right="20.0" top="30.0" />

@@ -12,6 +12,7 @@ import javafx.fxml.FXML;
 
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -52,6 +53,8 @@ public class VideoPlayerController {
     private BarChart<String, Integer> histogram;
     @FXML
     private CategoryAxis xAxis;
+    @FXML
+    private NumberAxis yAxis;
     @FXML
     private Label processLabel;
     @FXML
@@ -142,6 +145,8 @@ public class VideoPlayerController {
         }
         valueRange.addAll(Arrays.asList(ranges));
         xAxis.setCategories(valueRange);
+        xAxis.setLabel("QR-level");
+        yAxis.setLabel("Count");
     }
 
     private double[][] processImage(Mat image) {
