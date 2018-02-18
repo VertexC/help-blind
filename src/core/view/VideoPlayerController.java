@@ -67,7 +67,7 @@ public class VideoPlayerController {
     private boolean playVideoStatus = false;
     private int videoTimerPeriod = 4000;  // 4000 ms
     private int audioTimerPeriod = 40;  // 40 ms
-    private int chartTimerPeriod = 4000; // 40 ms
+    private int chartTimerPeriod = 2000; // 40 ms
     private int framewidth = 700;
     private int frameheight = 400;
     private ScheduledExecutorService videoTimer;
@@ -327,11 +327,13 @@ public class VideoPlayerController {
 
 
     private void stopPlaying() {
+        System.out.println("Stop Timer.");
         this.playVideoStatus = false;
         // update the playVideoButton content
         this.playVideoButton.setText("Play");
         stopTimer(soundTimer);
         stopTimer(videoTimer);
+        stopTimer(chartTimer);
         releaseVideo();
     }
 
@@ -382,7 +384,13 @@ public class VideoPlayerController {
 
             @Override
             public void run() {
-                this.update();
+                System.out.println("Still Running.");
+                if (playVideoStatus) {
+                    this.update();
+                } else{
+                    System.out.println("stop the timer");
+                    stopTimer(chartTimer);
+                }
             }
         }
         this.chartTimer = Executors.newSingleThreadScheduledExecutor();
