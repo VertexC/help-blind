@@ -64,11 +64,12 @@ public class VideoPlayerController {
     private boolean playVideoStatus = false;
     private int videoTimerPeriod = 4000;  // 4000 ms
     private int audioTimerPeriod = 40;  // 40 ms
+    private int chartTimerPeriod = 4000; // 40 ms
     private int framewidth = 700;
     private int frameheight = 400;
     private ScheduledExecutorService videoTimer;
     private ScheduledExecutorService soundTimer;
-
+    private ScheduledExecutorService chartTimer;
     // parameter to resize and play the frame with sound and histogram
     private int width;
     private int height;
@@ -137,7 +138,7 @@ public class VideoPlayerController {
         // for histogram
         String[] ranges = new String[numberOfQuantizationLevels];
         for (int i = 0; i < numberOfQuantizationLevels; i++) {
-            ranges[i] = Integer.toString(i * numberOfQuantizationLevels) + " - " + Integer.toString(i * numberOfQuantizationLevels + numberOfQuantizationLevels - 1);
+            ranges[i] = Integer.toString(i);
         }
         valueRange.addAll(Arrays.asList(ranges));
         xAxis.setCategories(valueRange);
@@ -356,8 +357,7 @@ public class VideoPlayerController {
         // build up the histogram according to its grey value
 
         class updateChart implements Runnable {
-            @Override
-            public void run() {
+            private void update() {
                 int group[] = new int[numberOfQuantizationLevels]; // 0 - 15, 16 - 31, ..., 240 - 255
                 for (int i = 0; i < numberOfQuantizationLevels; i++) {
                     group[i] = 0;
@@ -368,12 +368,21 @@ public class VideoPlayerController {
                     }
                 }
                 XYChart.Series<String, Integer> series = createHistogramSeries(group);
-                // put the data into barchart
-                histogram.getData().add(series);
+                // put the data into bar chart
+                Platform.runLater(() -> {
+                            histogram.getData().setAll(series);
+                        }
+                );
+            }
+
+            @Override
+            public void run() {
+                this.update();
             }
         }
-
-
+        this.chartTimer = Executors.newSingleThreadScheduledExecutor();
+        updateChart chartUpdater = new updateChart();
+        this.chartTimer.scheduleAtFixedRate(chartUpdater, 0, this.chartTimerPeriod, TimeUnit.MILLISECONDS);
     }
 
     private XYChart.Series<String, Integer> createHistogramSeries(int[] group) {
