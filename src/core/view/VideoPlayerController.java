@@ -67,7 +67,7 @@ public class VideoPlayerController {
     private boolean playVideoStatus = false;
     private int videoTimerPeriod = 4000;  // 4000 ms
     private int audioTimerPeriod = 40;  // 40 ms
-    private int chartTimerPeriod = 2000; // 40 ms
+    private int chartTimerPeriod = 4000; // 40 ms
     private int framewidth = 700;
     private int frameheight = 400;
     private ScheduledExecutorService videoTimer;
