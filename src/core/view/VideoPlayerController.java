@@ -67,7 +67,6 @@ public class VideoPlayerController {
     private boolean playVideoStatus = false;
     private int videoTimerPeriod = 4000;  // 4000 ms
     private int audioTimerPeriod = 40;  // 40 ms
-    private int chartTimerPeriod = 4000; // 40 ms
     private int framewidth = 700;
     private int frameheight = 400;
     private ScheduledExecutorService videoTimer;
@@ -333,7 +332,6 @@ public class VideoPlayerController {
         this.playVideoButton.setText("Play");
         stopTimer(soundTimer);
         stopTimer(videoTimer);
-        stopTimer(chartTimer);
         releaseVideo();
     }
 
@@ -362,40 +360,23 @@ public class VideoPlayerController {
         double[][] processedImage = processImage(resizedFrame);
         // make the frame into grey
         // build up the histogram according to its grey value
-
-        class updateChart implements Runnable {
-            private void update() {
-                int group[] = new int[numberOfQuantizationLevels]; // 0 - 15, 16 - 31, ..., 240 - 255
-                for (int i = 0; i < numberOfQuantizationLevels; i++) {
-                    group[i] = 0;
-                }
-                for (int i = 0; i < height; i++) {
-                    for (int j = 0; j < width; j++) {
-                        group[(int) Math.floor(processedImage[i][j] * numberOfQuantizationLevels)] += 1;
-                    }
-                }
-                XYChart.Series<String, Integer> series = createHistogramSeries(group);
-                // put the data into bar chart
-                Platform.runLater(() -> {
-                            histogram.getData().setAll(series);
-                        }
-                );
-            }
-
-            @Override
-            public void run() {
-                System.out.println("Still Running.");
-                if (playVideoStatus) {
-                    this.update();
-                } else{
-                    System.out.println("stop the timer");
-                    stopTimer(chartTimer);
-                }
+        int group[] = new int[numberOfQuantizationLevels]; // 0 - 15, 16 - 31, ..., 240 - 255
+        for (int i = 0; i < numberOfQuantizationLevels; i++) {
+            group[i] = 0;
+        }
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                group[(int) Math.floor(processedImage[i][j] * numberOfQuantizationLevels)] += 1;
             }
         }
-        this.chartTimer = Executors.newSingleThreadScheduledExecutor();
-        updateChart chartUpdater = new updateChart();
-        this.chartTimer.scheduleAtFixedRate(chartUpdater, 0, this.chartTimerPeriod, TimeUnit.MILLISECONDS);
+        XYChart.Series<String, Integer> series = createHistogramSeries(group);
+        // put the data into bar chart
+        Platform.runLater(() -> {
+                    histogram.getData().setAll(series);
+                }
+        );
+
+
     }
 
     private XYChart.Series<String, Integer> createHistogramSeries(int[] group) {
