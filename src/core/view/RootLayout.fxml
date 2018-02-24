@@ -15,16 +15,6 @@
               <MenuItem mnemonicParsing="false" onAction="#openVideo" text="Open Video..." />
             </items>
           </Menu>
-          <Menu mnemonicParsing="false" text="Edit">
-            <items>
-              <MenuItem mnemonicParsing="false" text="Delete" />
-            </items>
-          </Menu>
-          <Menu mnemonicParsing="false" text="Help">
-            <items>
-              <MenuItem mnemonicParsing="false" text="About" />
-            </items>
-          </Menu>
         </menus>
       </MenuBar>
    </top>
