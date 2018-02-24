@@ -22,6 +22,7 @@ Extra Features:
 #### Implementation
 
 ##### File Selector
+![very good|512x397,20%](/images/fileSelector)
 
 ##### Play the video - Leo
 
