@@ -15,7 +15,10 @@ Extra Features:
 - [x] add histogram, which shows the image's RBG information of the current frame
 - [x] add CSS, to beautify the UI
 
-#### Screen Shots of the Program - Leo
+#### Screen Shot of the Program
+<div style="border:10px solid grey"> 
+<img src="\image\program.png" width="">
+</div>
 
 
 #### Implementation
@@ -95,7 +98,6 @@ Runnable frameGrabber = new Runnable() {
 
 ##### Histogram
 <img src="\image\histogram.png" width="200">
-
 <div style="font-size:13px">The main idea of histogram is to show the disribution of the color value across the image. For histogram, after getting the quantilized color value of resized grey image, we group them into different catagries according to the range of value.
 </div>
 
