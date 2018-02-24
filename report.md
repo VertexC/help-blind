@@ -1,30 +1,37 @@
-### CMPT365 Assignment2 Report
-#### Group Member: Bowen Chen, Haipeng Li
+# CMPT365 Assignment2 Report
+> Group Member: 
+>
+> - Bowen Chen
+> - Haipeng Li
 
-Required Features:
+### Features list
+
+#### Required Features:
+
 - [x] use the java skeleton
 - [x] can loads a video
 - [x] user is able to select whatever video to be loaded
 - [x] click sound between each frame 
 - [x] convert image of each frame into sound
 
-Extra Features:
+#### Extra Features:
+
 - [x] add play/stop button
 - [x] add slider, slider moves as video plays, and user can drag slider to change the frame to be played
 - [x] add frame count prompt, shown as currentFrame/totalFrame
 - [x] add histogram, which shows the image's RBG information of the current frame
 - [x] add CSS, to beautify the UI
 
-#### Screen Shot of the Program
+### Screen Shot of the Program
 <div style="border:10px solid grey"> 
-<img src="\image\program.png" width="">
+<img src=".\image\program.png" width="">
 </div>
 
 
-#### Implementation
+### Implementation
 
-##### File Selector
-<img src="\image\fileSelector.png" width="200">
+#### File Selector
+<img src=".\image\fileSelector.png" width="200">
 <div style="font-size:13px">In RootLayoutController,add open event on "Open Video" menu item. When user select the file from the dialog, get the file path and store it in public variable in mainApp.c</div>
 
 ```java
@@ -40,10 +47,10 @@ private void openVideo(){
 }   
 ```
 
-##### Play the video - Leo
+#### Video player - Leo
 
-##### Slider
-<img src="\image\slider.png" width="">
+#### Slider
+<img src=".\image\slider.png" width="">
 <div style="font-size:13px"> Add a listener to slider, when its value(position) changes, set the frame of opened video according to the slider's position. </div>
 
 ```java
@@ -62,7 +69,7 @@ slider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
 });
 ```
 
-##### Click Sound
+#### Click Sound
 <div style="font-size:13px">For click sound between frames, Clip would be a good implementation as the sounds is relatively short. We download a 1s click sound .wav and load it into clip. </div>
 
 ```java
@@ -94,10 +101,10 @@ Runnable frameGrabber = new Runnable() {
     }
 }
 ```
-##### Image to Sound - Leo
+#### Image to Sound - Leo
 
-##### Histogram
-<img src="\image\histogram.png" width="200">
+#### Histogram
+<img src=".\image\histogram.png" width="200">
 <div style="font-size:13px">The main idea of histogram is to show the disribution of the color value across the image. For histogram, after getting the quantilized color value of resized grey image, we group them into different catagries according to the range of value.
 </div>
 
@@ -131,8 +138,7 @@ double[][] processedImage = processImage(resizedFrame);
 }
 ```
 
-##### CSS - Leo
+#### User Interface - Leo
 
 
-#### Discussion
-
+### Discussion
