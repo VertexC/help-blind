@@ -47,7 +47,35 @@ private void openVideo(){
 }   
 ```
 
-#### Video player - Leo
+#### Video player
+
+The video player utilizes the OpenCV `VideoCapture` and `Mat` class. 
+
+##### 1. Open the video file
+
+`VideoCapture` class provide convenient  way to open a video file, by calling `VideoCapture.open("path_to_video");`.
+
+##### 2. Get each frame and display
+
+After opening, we have to convert each frame of the video to individual `Mat` instance. This can be done by `VideoCapture.read(Mat frame)` function.
+
+After we get the image as `Mat` object, we need to display it in the `ImageView` object on the window, which requires a `Image` object rather than `Mat` object. Thus I utilize the `Utilities.mat2Image(Mat)`  function provided in `Utilities` class to convert the frame to `Image` object that can be directly displayed.
+
+##### 3. Use multithreading to avoid blocking
+
+The second step (Get each frame and display) need to repeat for each frame of the video. So `ScheduledExecutorService` is used as a timer that can execute the playing task on schedule. In this case we use `4 second` as the timer interval to make sure the sound of one frame can finish playing.
+
+```java
+Runnable frameGrabber = new Runnable() {
+    @Override
+    public void run() {
+        // instructions described in step 2
+    }
+videoTimer = Executors.newSingleThreadScheduledExecutor();
+videoTimer.scheduleAtFixedRate(frameGrabber, 0, videoTimerPeriod, TimeUnit.MILLISECONDS);
+```
+
+The advantage of using `ScheduledExecutorService`  is that it is multithreading. The video player can be executed in another thread that is different from the `FXThread` that do the UI jobs. Thus the other interaction between user and the windows is not affected by the video player (avoid blocking).
 
 #### Slider
 <img src=".\image\slider.png" width="">
@@ -101,7 +129,58 @@ Runnable frameGrabber = new Runnable() {
     }
 }
 ```
-#### Image to Sound - Leo
+#### Image to Sound
+
+##### 1. Image pre-processing
+
+In order to convert each frame of a video as sound as described in assignment requirement, we need to simplify the image first and make it contains less information.
+
+We convert the image from `GRB` channel to `Grayscale` channel by calling `Imgproc.cvtColor` provided by OpenCV and then resize it to `64*64` size.
+
+```java
+Imgproc.cvtColor(image, grayImage, Imgproc.COLOR_BGR2GRAY);
+Imgproc.resize(grayImage, resizedImage, new Size(width, height));
+```
+
+Then we need to quantize the image color from 0~255 to 0~15. This operation should be done for every pixel in the image
+
+```java
+for (int row = 0; row < resizedImage.rows(); row++) {
+    for (int col = 0; col < resizedImage.cols(); col++) {
+            roundedImage[row][col] = (double) Math.floor(resizedImage.get(row, col)[0] / (256 / numberOfQuantizationLevels)) / numberOfQuantizationLevels;
+    }
+}
+```
+
+##### 2. Iterate each column and play sound
+
+Once we get the rounded image matrix, we can convert column by column.
+
+For each column we have 500 samples, each of which is one byte long. 
+
+For each sample, we use $signal=sum(sin(2\pi freq(m) * percentage\_of\_time))$, where $m$ is the relative pitch of a row, with deeper row lower pitch.
+
+After compute the signal, we normalized it between the $[-2^7, 2^7-1]$, then write it to audio buffer.
+
+```java
+byte[] audioBuffer = new byte[numberOfSamplesPerColumn];
+for (int t = 1; t <= numberOfSamplesPerColumn; t++) {
+    double signal = 0;
+    for (int row = 0; row < height; row++) {
+        int m = height - row - 1; // Be sure you understand why it is height rather width, and why we subtract 1
+        int time = t + col * numberOfSamplesPerColumn;
+        double ss = Math.sin(2 * Math.PI * freq[m] * (double) time / sampleRate);
+        signal += roundedImage[row][col] * ss;
+    }
+    double normalizedSignal = signal / height; // signal: [-height, height];  normalizedSignal: [-1, 1]
+    audioBuffer[t - 1] = (byte) (normalizedSignal * 0x7F); // Be sure you understand what the weird number 0x7F is for
+}
+sourceDataLine.write(audioBuffer, 0, numberOfSamplesPerColumn);
+```
+
+##### 3. Use multithreading to avoid blocking
+
+We also use multithreading, i.e.,  `ScheduledExecutorService`  to avoid blocking. The code is similar to 'Video player' part.
 
 #### Histogram
 <img src=".\image\histogram.png" width="200">
@@ -138,7 +217,29 @@ double[][] processedImage = processImage(resizedFrame);
 }
 ```
 
-#### User Interface - Leo
+#### User Interface
 
+`Bootstrap` stylesheet is used in our user interface design, which provide the UI elements with elegant modern style.
+
+For example, the buttons' style can be seen from the following screenshot.
+
+Another important style is the blurring shadow effect of the video player part. This is done by adding a `StackPane` outside the `ImageView` element, and set the `-fx-effect`, -`fx-background-color` of `StackPane` to
+
+```css
+-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,1), 10, 0, 0, 0); 
+-fx-background-color: rgba(255, 255, 255,0.1);
+```
+
+Finally, add proper padding between elements and make them not stack together.
+
+![](./image/ui.png)
 
 ### Discussion
+
+#### Bowen Chen
+
+#### Haipeng Li
+
+In this assignment, I have deeper understanding of the technique of video player using `OpenCV` library, and sound composition by basic mathematical computation.
+
+Moreover, I learned how to use  `JavaFX` package to build GUI in Java and use multithreading to avoid blocking.
