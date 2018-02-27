@@ -244,10 +244,7 @@ public class VideoPlayerController {
                     @Override
                     public void run() {
                         // grab the frame from the video
-                        Mat frame = grabFrame();
-                        double ratio = frame.height() * 1.0 / frame.width();
-                        Mat resizedFrame = new Mat();
-                        Imgproc.resize(frame, resizedFrame, new Size(framewidth, (framewidth * ratio) > frameheight ? frameheight : (framewidth * ratio)));
+                        Mat resizedFrame = grabFrame();
                         if (!resizedFrame.empty()) {
                             // play audio
                             stackPane.setPrefWidth(framewidth);
@@ -297,11 +294,22 @@ public class VideoPlayerController {
         }
     }
 
-    public void setCapture() {
+    private void setCapture() {
         String path = mainApp.getOpenedFilePath();
         if (path != null) {
             this.capture.open(mainApp.getOpenedFilePath());
         }
+    }
+
+    public void setPreview() {
+        setCapture();
+        Mat firstFrame = grabFrame();
+        stackPane.setPrefWidth(framewidth);
+        stackPane.setPrefHeight(frameheight);
+        Image imageToshow = Utilities.mat2Image(firstFrame);
+        currentFrame.setFitWidth(framewidth);
+        updateVideoView(currentFrame, imageToshow);
+        updateHistogramView(firstFrame);
     }
 
     private Mat grabFrame() {
@@ -321,7 +329,10 @@ public class VideoPlayerController {
                 System.err.println("Exception during the image elaboration: " + e);
             }
         }
-        return frame;
+        double ratio = frame.height() * 1.0 / frame.width();
+        Mat resizedFrame = new Mat();
+        Imgproc.resize(frame, resizedFrame, new Size(framewidth, (framewidth * ratio) > frameheight ? frameheight : (framewidth * ratio)));
+        return resizedFrame;
     }
 
 

@@ -18,6 +18,7 @@ public class MainApp extends Application{
     private Stage primaryStage;
     private BorderPane rootLayout;
     private String openedFilePath;
+    private VideoPlayerController videoPlayerController;
     static{ System.loadLibrary(Core.NATIVE_LIBRARY_NAME); }
 
     @Override
@@ -57,8 +58,8 @@ public class MainApp extends Application{
             BorderPane videoPlayer = loader.load();
 
             // give the controller access to the main app
-            VideoPlayerController controller = loader.getController();
-            controller.setMainApp(this);
+            videoPlayerController = loader.getController();
+            videoPlayerController.setMainApp(this);
 
             // set VideoPlayer
             rootLayout.setCenter(videoPlayer);
@@ -69,6 +70,7 @@ public class MainApp extends Application{
 
     public void setOpenedFilePath(String path){
         this.openedFilePath = path;
+        videoPlayerController.setPreview();
     }
 
     public String getOpenedFilePath(){
