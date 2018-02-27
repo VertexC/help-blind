@@ -22,6 +22,11 @@
 - [x] add histogram, which shows the image's RBG information of the current frame
 - [x] add CSS, to beautify the UI
 
+<div style="margin-bottom:40px;padding:150px;">
+
+</div>
+
+
 ### Screen Shot of the Program
 <div style="border:10px solid grey"> 
 <img src=".\image\program.png" width="">
@@ -46,6 +51,10 @@ private void openVideo(){
     }
 }   
 ```
+
+<div style="margin-bottom:10px;padding:30px;">
+
+</div>
 
 #### Video player
 
@@ -76,6 +85,10 @@ videoTimer.scheduleAtFixedRate(frameGrabber, 0, videoTimerPeriod, TimeUnit.MILLI
 ```
 
 The advantage of using `ScheduledExecutorService`  is that it is multithreading. The video player can be executed in another thread that is different from the `FXThread` that do the UI jobs. Thus the other interaction between user and the windows is not affected by the video player (avoid blocking).
+
+<div style="margin-bottom:40px;padding:30px;">
+
+</div>
 
 #### Slider
 <img src=".\image\slider.png" width="">
@@ -237,6 +250,12 @@ Finally, add proper padding between elements and make them not stack together.
 ### Discussion
 
 #### Bowen Chen
+
+This assignment has offered me  a fresh experience as I never code Java before.
+
+After those days dealing with javafx, I have to say, that javafx with scene builder are efficient tools for programmer to build up the program with UI.
+
+Although there are still some issue remain to be fixed in this projects, like dead lock between thread when drag slider sometimes, it is somehow a complete application thanks to our efforts.
 
 #### Haipeng Li
 
