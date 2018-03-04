@@ -1,8 +1,8 @@
 # CMPT365 Assignment2 Report
 > Group Member: 
 >
-> - Bowen Chen
-> - Haipeng Li
+> - VertexC
+> - Leo
 
 ### Features list
 
@@ -246,19 +246,3 @@ Another important style is the blurring shadow effect of the video player part. 
 Finally, add proper padding between elements and make them not stack together.
 
 ![](./image/ui.png)
-
-### Discussion
-
-#### Bowen Chen
-
-This assignment has offered me  a fresh experience as I never code Java before.
-
-After those days dealing with javafx, I have to say, that javafx with scene builder are efficient tools for programmer to build up the program with UI.
-
-Although there are still some issue remain to be fixed in this projects, like dead lock between thread when drag slider sometimes, it is somehow a complete application thanks to our efforts.
-
-#### Haipeng Li
-
-In this assignment, I have deeper understanding of the technique of video player using `OpenCV` library, and sound composition by basic mathematical computation.
-
-Moreover, I learned how to use  `JavaFX` package to build GUI in Java and use multithreading to avoid blocking.
