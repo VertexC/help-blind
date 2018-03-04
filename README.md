@@ -1,4 +1,3 @@
-# CMPT365 Assignment2 Report
 > Group Member: 
 >
 > - VertexC
